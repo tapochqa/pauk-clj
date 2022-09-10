@@ -1,9 +1,9 @@
 (defproject pauk-clj "0.1.0"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+  :description "РАЮК"
+  :url "https://t.me/rayk_bot"
 
-  :license {:name "Eclipse Public License"
-            :url "http://www.eclipse.org/legal/epl-v10.html"}
+  :license {:name "ЕСЛIРЫЕ РЮВЛIС ЛIСЕИЫЕ"
+            :url "НТТР://ШШШ.ЕСЛIРЫЕ.ОЯЖ/ЛЕЖАЛ/ЕРЛ-Ф10.НТМЛ"}
 
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [environ             "1.1.0"]
