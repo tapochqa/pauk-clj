@@ -5,35 +5,53 @@
             [morse.handlers :as h]
             [morse.polling :as p]
             [morse.api :as t]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [pauk.core :as pauk])
   (:gen-class))
 
 (def token (slurp "token"))
 
-(def step-1
-  (zipmap 
-    (str/split "А Б В Г Д Е Ё Ж З И Й К Л М Н О П Р С Т У Ф Х Ц Ч Ш Щ Ъ Ы Ь Э Ю Я" #" ") 
-    (str/split "A B V G D E YO ZH Z I IY K L M N O P R S T U F H TS CH SH SHCH ` Y ` E YU YA" #" ")))
-(def step-2 
-  (zipmap 
-    (str/split "A B C D E F G H I J K L M N O P Q R S T V U W X Y Z" #" ") 
-    (str/split "А В С Д Е Г Ж Н I Ь К Л М И О Р Ц Я Ы Т Ф Ю Ш Х У П" #" ")))
-
-(defn paukize[text]
-  (def text' (str/replace (str/upper-case text) #"[ЁёА-я]" step-1)) 
-  (str (str/replace text' #"[a-zA-Z]" step-2)))
+(defn length [message]
+  (-> message :entities first :length))
+(defn needed-text [message]
+  (subs (:text message) (+ (length message) 1)))
+(defn send-in-algo [id message keyword]
+  (println "Got command")
+  (println message)
+  (t/send-text token id (pauk/paukize (needed-text message) keyword)))
 
 (h/defhandler handler
 
   (h/command-fn "start"
     (fn [{{id :id :as chat} :chat}]
       (println "Bot joined new chat: " chat)
-      (t/send-text token id "🕷 Напишите что-нибудь на русском")))
+      (t/send-text token id "🕷 Напишите что-нибудь на русском или английском")))
 
+  (h/command-fn "german"
+    (fn [{{id :id} :chat text :text :as message}] (send-in-algo id message :german)))
+  (h/command-fn "ugly"
+    (fn [{{id :id} :chat text :text :as message}]
+    (send-in-algo id message :ugly)))
+  (h/command-fn "short"
+    (fn [{{id :id} :chat text :text :as message}]
+    (send-in-algo id message :short)))
+  (h/command-fn "telegrams"
+    (fn [{{id :id} :chat text :text :as message}]
+    (send-in-algo id message :telegrams)))
+  (h/command-fn "iso_91995_b"
+    (fn [{{id :id} :chat text :text :as message}]
+    (send-in-algo id message :iso-91995-b)))
+  (h/command-fn "iso_r_9_1968"
+    (fn [{{id :id} :chat text :text :as message}]
+    (send-in-algo id message :iso-r-9-1968)))
+  (h/command-fn "mid_2113"
+    (fn [{{id :id} :chat text :text :as message}]
+    (send-in-algo id message :mid-2113)))
+  
   (h/message-fn
     (fn [{{id :id} :chat text :text :as message}]
       (println "Intercepted message: " message)
-      (t/send-text token id (paukize text)))))
+      (t/send-text token id (pauk/paukize text)))))
 
 
 (defn -main
@@ -43,4 +61,5 @@
     (System/exit 1))
 
   (println "Starting the pauk-clj")
-  (<!! (p/start token handler)))
+  (<!! (p/start token handler))
+  )
