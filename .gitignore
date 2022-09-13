@@ -10,3 +10,6 @@ pom.xml.asc
 .hgignore
 .hg/
 token
+reports/*
+builds/*
+TELEGRAM_OFFSET

@@ -1,65 +1,105 @@
 (ns pauk-clj.core
-  (:require [clojure.core.async :refer [<!!]]
+  (:require [clojure.string :as str]
+            [pauk-clj.telegram :as tbot]
+            [cheshire.core :as json]
             [clojure.string :as str]
-            [environ.core :refer [env]]
-            [morse.handlers :as h]
-            [morse.polling :as p]
-            [morse.api :as t]
-            [clojure.string :as str]
-            [pauk.core :as pauk])
+            [pauk.core :as pauk]
+            [clojure.pprint :refer :all])
   (:gen-class))
 
-(def token (slurp "token"))
+(def token "1771592901:AAFld9IRUTeFXcRh_7UmCz9CyOlcXL8iK5Q")
 
-(defn length [message]
-  (-> message :entities first :length))
-(defn needed-text [message]
-  (subs (:text message) (+ (length message) 1)))
-(defn send-in-algo [id message keyword]
-  (println "Got command")
-  (println message)
-  (t/send-text token id (pauk/paukize (needed-text message) keyword)))
+(defn needed-text [{text :text entities :entities}]
+  (subs text (+ (-> entities first :length) 1)))
 
-(h/defhandler handler
+(defn reply-in-pauk 
+  ([token chat-id text]
+    (tbot/send-message {:token token} chat-id (pauk/paukize text)))
+  ([bot chat-id text standard]
+    (tbot/send-message {:token token} chat-id (pauk/paukize text standard))))
 
-  (h/command-fn "start"
-    (fn [{{id :id :as chat} :chat}]
-      (println "Bot joined new chat: " chat)
-      (t/send-text token id "🕷 Напишите что-нибудь на русском или английском")))
+(defn the-handler [token message]
+  (let [text (:text message)
+        chat-id (-> message :chat :id)]
+    (println text chat-id)
+    (when (not (= nil text))
+      (cond
+        (str/starts-with? text "/german") (reply-in-pauk token chat-id (needed-text message) :ugly)
+        (str/starts-with? text "/ugly") (reply-in-pauk token chat-id (needed-text message) :ugly)
+        (str/starts-with? text "/short") (reply-in-pauk token chat-id (needed-text message) :short)
+        (str/starts-with? text "/telegrams") (reply-in-pauk token chat-id (needed-text message) :telegrams)
+        (str/starts-with? text "/iso_91995_b") (reply-in-pauk token chat-id (needed-text message) :iso-91995-b)
+        (str/starts-with? text "/iso_r_9_1968") (reply-in-pauk token chat-id (needed-text message) :iso-r-9-1968)
+        (str/starts-with? text "/mid_2113") (reply-in-pauk token chat-id (needed-text message) :mid-2113)
+        :else (reply-in-pauk token chat-id text)))))
 
-  (h/command-fn "german"
-    (fn [{{id :id} :chat text :text :as message}] (send-in-algo id message :german)))
-  (h/command-fn "ugly"
-    (fn [{{id :id} :chat text :text :as message}]
-    (send-in-algo id message :ugly)))
-  (h/command-fn "short"
-    (fn [{{id :id} :chat text :text :as message}]
-    (send-in-algo id message :short)))
-  (h/command-fn "telegrams"
-    (fn [{{id :id} :chat text :text :as message}]
-    (send-in-algo id message :telegrams)))
-  (h/command-fn "iso_91995_b"
-    (fn [{{id :id} :chat text :text :as message}]
-    (send-in-algo id message :iso-91995-b)))
-  (h/command-fn "iso_r_9_1968"
-    (fn [{{id :id} :chat text :text :as message}]
-    (send-in-algo id message :iso-r-9-1968)))
-  (h/command-fn "mid_2113"
-    (fn [{{id :id} :chat text :text :as message}]
-    (send-in-algo id message :mid-2113)))
-  
-  (h/message-fn
-    (fn [{{id :id} :chat text :text :as message}]
-      (println "Intercepted message: " message)
-      (t/send-text token id (pauk/paukize text)))))
+(defn save-offset [offset-file offset]
+  (spit offset-file (str offset)))
+
+
+(defn load-offset [offset-file]
+  (try
+    (-> offset-file slurp Long/parseLong)
+    (catch Throwable _
+      nil)))
+
+(defmacro with-safe-log
+  "
+  A macro to wrap Telegram calls (prevent the whole program from crushing).
+  "
+  [& body]
+  `(try
+     ~@body
+     (catch Throwable e#
+       (println (ex-message e#)))))
+
+
+(defn run-polling
+  [config]
+
+  (let [{{:keys [udpate-timeout]} :polling
+         :keys [telegram]}
+        config
+
+        me
+        (tbot/get-me telegram)
+
+        offset-file "TELEGRAM_OFFSET"
+
+        context
+        {:me me
+         :telegram telegram
+         :config config}
+
+        offset
+        (load-offset offset-file)]
+
+    (loop [offset offset]
+
+      (let [updates
+            (with-safe-log
+              (tbot/get-updates telegram
+                              {:offset offset
+                               :timeout udpate-timeout}))
+
+            new-offset
+            (or (some-> updates peek :update_id inc)
+                offset)]
+
+        (println "Got %s updates, next offset: %s, updates: %s"
+                    (count updates)
+                    new-offset
+                    (json/generate-string updates {:pretty true}))
+
+        (when offset
+          (save-offset offset-file new-offset))
+        (doseq [message updates]
+          (pprint message)
+          (the-handler (:token telegram) (:message message)))
+
+        (recur new-offset)))))
 
 
 (defn -main
   [& args]
-  (when (str/blank? token)
-    (println "Please provde token in TELEGRAM_TOKEN environment variable!")
-    (System/exit 1))
-
-  (println "Starting the pauk-clj")
-  (<!! (p/start token handler))
-  )
+  (run-polling {:telegram {:token token} :polling {:update-timeout 1000}}))

@@ -1,0 +1,8 @@
+[
+    {
+        "name" : "pauk_clj.core",
+        "allPublicConstructors": true,
+        "allPublicMethods": true,
+        "allDeclaredMethods": true
+    }
+]

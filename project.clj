@@ -5,14 +5,22 @@
   :license {:name "ЕСЛIРЫЕ РЮВЛIС ЛIСЕИЫЕ"
             :url "НТТР://ШШШ.ЕСЛIРЫЕ.ОЯЖ/ЛЕЖАЛ/ЕРЛ-Ф10.НТМЛ"}
 
-  :dependencies [[org.clojure/clojure "1.8.0"]
-                 [environ             "1.1.0"]
-                 [morse               "0.4.3"]
+  :dependencies [[org.clojure/clojure "1.11.0"]
+                 [http-kit "2.6.0"]
+                 [cheshire "5.11.0"]
                  [org.clojars.tapochqa/pauk "1.3.0"]]
 
-  :plugins [[lein-environ "1.1.0"]]
+  :repl-options{:timeout 120000}
 
   :main ^:skip-aot pauk-clj.core
   :target-path "target/%s"
 
-  :profiles {:uberjar {:aot :all}})
+   :profiles
+    {:dev
+     {:global-vars
+      {*warn-on-reflection* true
+       *assert* true}}
+
+  :uberjar
+   {:aot :all
+    :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}})
