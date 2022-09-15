@@ -7,21 +7,18 @@
             [clojure.pprint :refer :all])
   (:gen-class))
 
-(def token "1771592901:AAFld9IRUTeFXcRh_7UmCz9CyOlcXL8iK5Q")
-
 (defn needed-text [{text :text entities :entities}]
   (subs text (+ (-> entities first :length) 1)))
 
 (defn reply-in-pauk 
   ([token chat-id text]
     (tbot/send-message {:token token} chat-id (pauk/paukize text)))
-  ([bot chat-id text standard]
+  ([token chat-id text standard]
     (tbot/send-message {:token token} chat-id (pauk/paukize text standard))))
 
 (defn the-handler [token message]
   (let [text (:text message)
         chat-id (-> message :chat :id)]
-    (println text chat-id)
     (when (not (= nil text))
       (cond
         (str/starts-with? text "/german") (reply-in-pauk token chat-id (needed-text message) :ugly)
@@ -101,5 +98,6 @@
 
 
 (defn -main
-  [& args]
-  (run-polling {:telegram {:token token} :polling {:update-timeout 1000}}))
+  [mytoken]
+  (println (type mytoken))
+  (run-polling {:telegram {:token mytoken} :polling {:update-timeout 1000}}))
