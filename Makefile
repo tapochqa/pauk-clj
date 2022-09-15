@@ -10,7 +10,9 @@ NI_ARGS = \
 	-H:ReflectionConfigurationFiles=reflection-config.json \
 	-H:+ReportExceptionStackTraces \
 	-H:Log=registerResource \
-	-H:Name=./builds/pauk-clj-Darwin-x86_64 
+	-H:Name=./builds/pauk-clj-
+
+PWD = $(shell pwd)
 
 cp:
 	git add .
@@ -19,4 +21,7 @@ cp:
 	git push --all gh
 
 build-native-macos:
-	sudo native-image ${NI_ARGS}
+	sudo native-image ${NI_ARGS}macos
+
+build-native-linux:
+	docker run -it --rm -v ${PWD}:/build -w /build ghcr.io/graalvm/native-image:22.2.0 ${NI_ARGS}$linux
